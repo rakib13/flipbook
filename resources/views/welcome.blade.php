@@ -29,16 +29,16 @@
         }
 
         #flipbook {
-            width: 1000px;
-            height: 650px;
+            max-width: 1000px;
+            max-height: 650px;
             margin: 0 auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
             background: #fff;
         }
 
         #flipbook .page {
-            width: 500px;
-            height: 650px;
+            max-width: 500px;
+            max-height: 650px;
             overflow: hidden;
             display: flex;
             align-items: center;
@@ -118,7 +118,6 @@
         }
     </style>
 
-
 </head>
 
 <body>
@@ -128,7 +127,8 @@
     </button>
 
     <!-- The Modal -->
-    @include('modal-content', ['filePath' => 'pdf/git-n-github-at-glance.pdf'])
+    {{-- @include('modal-content', ['filePath' => 'pdf/git-n-github-at-glance.pdf']) --}}
+     @include('modal-content', {{ $dataPath ?? '' }}) 
 
 </body>
 
@@ -138,7 +138,21 @@
 
 <script>
     // Example using jQuery and AJAX
-    $('#myModal').on('show.bs.modal', function(event) {
+    
+    // $('#myModal').on('show.bs.modal', function(event) {
+    //     var button = $(event.relatedTarget); // Button that triggered the modal
+    //     // var dataId = button.data('id'); // Extract info from data-* attributes
+
+    //     $.ajax({
+    //         url: '/Modal',
+    //         method: 'GET',
+    //         success: function(response) {
+    //             $('#myModal .modal-body').html(response); // Inject content
+    //         }
+    //     });
+    // });
+
+    function showModal(event, filePath) {
         var button = $(event.relatedTarget); // Button that triggered the modal
         // var dataId = button.data('id'); // Extract info from data-* attributes
 
@@ -149,8 +163,7 @@
                 $('#myModal .modal-body').html(response); // Inject content
             }
         });
-    });
-
+    }
 </script>
 
 </html>
