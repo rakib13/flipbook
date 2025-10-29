@@ -122,13 +122,14 @@
 
 <body>
     <!-- Button to trigger the modal -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal">
+    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal"
+    onclick="showModal(event, 'pdf/git-n-github-at-glance.pdf')">
         Open Modal
     </button>
 
     <!-- The Modal -->
     {{-- @include('modal-content', ['filePath' => 'pdf/git-n-github-at-glance.pdf']) --}}
-     @include('modal-content', {{ $dataPath ?? '' }}) 
+     @include('modal-content', ['filePath' => $dataPath ?? ''])
 
 </body>
 
@@ -152,13 +153,23 @@
     //     });
     // });
 
-    function showModal(event, filePath) {
-        var button = $(event.relatedTarget); // Button that triggered the modal
-        // var dataId = button.data('id'); // Extract info from data-* attributes
+    // function showModal(event, filePath) {
+    //     var button = $(event.relatedTarget); // Button that triggered the modal
+    //     // var dataId = button.data('id'); // Extract info from data-* attributes
 
+    //     $.ajax({
+    //         url: '/Modal',
+    //         method: 'GET',
+    //         success: function(response) {
+    //             $('#myModal .modal-body').html(response); // Inject content
+    //         }
+    //     });
+    // }
+    function showModal(event, filePath) {
         $.ajax({
             url: '/Modal',
             method: 'GET',
+            data: { filePath: filePath }, // Pass the file path as a parameter
             success: function(response) {
                 $('#myModal .modal-body').html(response); // Inject content
             }
