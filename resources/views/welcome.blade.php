@@ -8,7 +8,6 @@
     <title>FLip Book Modal</title>
     <!-- In your layouts/app.blade.php or similar -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <style>
         body {
@@ -95,11 +94,11 @@
         }
 
         .nav-arrow.left {
-            left: -50px;
+            left: -30px;
         }
 
         .nav-arrow.right {
-            right: -50px;
+            right: -30px;
         }
 
         /* slider */
@@ -122,24 +121,73 @@
 
 <body>
     <!-- Button to trigger the modal -->
-    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#myModal"
-    onclick="showModal(event, 'pdf/git-n-github-at-glance.pdf')">
+    <button type="button" class="btn btn-primary loadImage" data-bs-toggle="modal" data-bs-target="#myModal"
+        onclick="showModal(event, 'pdf/git-n-github-at-glance.pdf')">
+        Open Modal
+    </button>
+
+    <button type="button" class="btn btn-primary loadImage" data-bs-toggle="modal" data-bs-target="#myModal"
+        onclick="showModal(event, 'pdf/BNP_Proposal_on_EC.pdf')">
         Open Modal
     </button>
 
     <!-- The Modal -->
     {{-- @include('modal-content', ['filePath' => 'pdf/git-n-github-at-glance.pdf']) --}}
-     @include('modal-content', ['filePath' => $dataPath ?? ''])
+    {{-- @include('modal-content', ['filePath' => $dataPath ?? '']) --}}
+
+
+    <div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="myModalLabel"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="controls">
+                        <button id="zoom-in">🔍 Zoom In</button>
+                        <button id="zoom-out">🔎 Zoom Out</button>
+                        <button id="fullscreen">⛶ Fullscreen</button>
+                        <button id="sound-toggle">🔊 Sound On</button>
+                    </div>
+
+                    <!-- Flipbook -->
+                    <div id="flipbook-wrapper">
+                        <div id="flipbook">Loading...</div>
+                        <div class="nav-arrow left" id="prev">◀</div>
+                        <div class="nav-arrow right" id="next">▶</div>
+                    </div>
+
+                    <!-- Slider -->
+                    <input id="page-slider" type="range" min="1" max="1" value="1">
+
+                    <!-- Share + Download -->
+                    <div class="bottom-bar">
+                        <button id="share-btn">🔗 Share</button>
+                        <a href="" download class="download-btn">⬇ Download PDF</a>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Save changes</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
 
 </body>
 
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.js"></script>
 
 <script>
     // Example using jQuery and AJAX
-    
+
     // $('#myModal').on('show.bs.modal', function(event) {
     //     var button = $(event.relatedTarget); // Button that triggered the modal
     //     // var dataId = button.data('id'); // Extract info from data-* attributes
@@ -153,25 +201,168 @@
     //     });
     // });
 
-    // function showModal(event, filePath) {
-    //     var button = $(event.relatedTarget); // Button that triggered the modal
-    //     // var dataId = button.data('id'); // Extract info from data-* attributes
 
+    // function showModal(event, filePath) {
     //     $.ajax({
     //         url: '/Modal',
     //         method: 'GET',
+    //         data: {
+    //             filePath: filePath
+    //         }, // Pass the file path as a parameter
     //         success: function(response) {
+    //             // $('#myModal .modal-body').html(response); // Inject content
+    //             $('#myModalLabel').text(filePath);
+    //             $('#myModal .download-btn').attr('href', filePath);
     //             $('#myModal .modal-body').html(response); // Inject content
+
     //         }
     //     });
-    // }
+</script>
+
+<script>
+    // var filePath;        
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
+
     function showModal(event, filePath) {
-        $.ajax({
-            url: '/Modal',
-            method: 'GET',
-            data: { filePath: filePath }, // Pass the file path as a parameter
-            success: function(response) {
-                $('#myModal .modal-body').html(response); // Inject content
+        $('#myModalLabel').text(filePath);
+        $('#myModal .download-btn').attr('href', filePath);
+
+        // Wait until modal is shown before initializing flipbook
+        $('#myModal').off('shown.bs.modal').on('shown.bs.modal', function() {
+            loadFlipbook(filePath);
+        });
+    }
+
+    function loadFlipbook(filePath) {
+
+        // clear old flipbook
+        $('#flipbook').turn('destroy').empty();
+        $('#prev, #next, #zoom-in, #zoom-out, #fullscreen, #sound-toggle, #page-slider').off();
+
+
+        // let pdfUrl = filePath;
+        const bookWidth = 1000,
+            bookHeight = 650,
+            pageWidth = bookWidth / 2,
+            pageHeight = bookHeight;
+        let pdfDoc = null,
+            userZoom = 1.0,
+            soundEnabled = true;
+        const flipSound = new Audio('https://www.soundjay.com/buttons/sounds/page-flip-01a.mp3');
+
+        let $flipbook = $('#flipbook');
+
+        pdfjsLib.getDocument(filePath).promise.then(function(pdf) {
+            pdfDoc = pdf;
+            $flipbook.empty();
+
+            $('#page-slider').attr('max', pdf.numPages);
+
+            for (let i = 1; i <= pdf.numPages; i++) {
+                $flipbook.append('<div class="page"><canvas id="canvas-' + i + '"></canvas></div>');
+            }
+
+
+            $flipbook.turn({
+                width: bookWidth,
+                height: bookHeight,
+                autoCenter: true,
+                display: 'double',
+                duration: 700,
+                elevation: 50,
+                gradients: true,
+                when: {
+                    turning: function(event, page) {
+                        renderPage(page);
+                        renderPage(page + 1);
+                        $('#page-slider').val(page);
+                        if (soundEnabled) {
+                            try {
+                                flipSound.currentTime = 0;
+                                flipSound.play();
+                            } catch (e) {}
+                        }
+                    }
+                }
+            });
+
+            renderPage(1);
+            if (pdf.numPages > 1) renderPage(2);
+        }).catch(err => {
+            $('#flipbook').html('<p class="text-danger">Failed to load PDF: ' + err.message + '</p>');
+        });
+
+        function renderPage(num) {
+            if (!pdfDoc || num < 1 || num > pdfDoc.numPages) return;
+            let canvas = document.getElementById('canvas-' + num);
+            if (!canvas) return;
+            pdfDoc.getPage(num).then(function(page) {
+                const unscaled = page.getViewport({
+                    scale: 1
+                });
+                const fitScale = (pageWidth / unscaled.width) * userZoom;
+                const viewport = page.getViewport({
+                    scale: fitScale
+                });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                canvas.style.width = viewport.width + 'px';
+                canvas.style.height = viewport.height + 'px';
+                page.render({
+                    canvasContext: canvas.getContext('2d'),
+                    viewport
+                });
+            });
+        }
+
+        function reloadPages() {
+            let current = $flipbook.turn('page') || 1;
+            for (let p = Math.max(1, current - 2); p <= Math.min(pdfDoc.numPages, current + 3); p++) renderPage(
+                p);
+        }
+
+        $('#prev').click(() => $flipbook.turn('previous'));
+        $('#next').click(() => $flipbook.turn('next'));
+        $('#zoom-in').click(() => {
+            userZoom += 0.15;
+            reloadPages();
+        });
+        $('#zoom-out').click(() => {
+            if (userZoom > 0.4) {
+                userZoom -= 0.15;
+                reloadPages();
+            }
+        });
+        $('#fullscreen').click(() => {
+            const el = document.documentElement;
+            !document.fullscreenElement ? el.requestFullscreen() : document.exitFullscreen();
+        });
+        $('#sound-toggle').click(() => {
+            soundEnabled = !soundEnabled;
+            $('#sound-toggle').text(soundEnabled ? '🔊 Sound On' : '🔇 Sound Off');
+        });
+        $('#page-slider').on('input change', function() {
+            $flipbook.turn('page', parseInt(this.value) || 1);
+        });
+        $(document).keydown(e => {
+            if (e.key === 'ArrowLeft') $flipbook.turn('previous');
+            if (e.key === 'ArrowRight') $flipbook.turn('next');
+        });
+
+        // SHARE button
+        document.getElementById("share-btn").addEventListener("click", () => {
+            const shareUrl = window.location.href; // current page link
+            if (navigator.share) {
+                navigator.share({
+                    title: "Flipbook",
+                    text: "Check out this PDF flipbook!",
+                    url: shareUrl
+                }).catch(err => console.log("Share failed:", err));
+            } else {
+                // fallback: copy to clipboard
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Link copied to clipboard!");
+                });
             }
         });
     }

@@ -26,7 +26,7 @@
                 <!-- Share + Download -->
                 <div class="bottom-bar">
                     <button id="share-btn">🔗 Share</button>
-                    <a href="{{ asset( $filePath ) }}" download class="download-btn">⬇ Download PDF</a>
+                    <a href="{{ asset($filePath) }}" download class="download-btn">⬇ Download PDF</a>
                 </div>
             </div>
             <div class="modal-footer">
@@ -41,10 +41,10 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.min.js"></script>
 <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc =
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
         'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-    const pdfUrl = "{{ asset( $filePath ) }}";
+    const pdfUrl = "{{ asset($filePath) }}";
     const bookWidth = 1000,
         bookHeight = 650,
         pageWidth = bookWidth / 2,

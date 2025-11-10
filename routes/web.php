@@ -10,4 +10,4 @@ Route::get('/', function () {
 
 Route::get('/flipbook', fn() => view('flipbook'));
 
-Route::get('/Modal', [AjaxController::class, 'loadModalContent']);
+Route::get('/Modal/{filePath}', [AjaxController::class, 'loadModalContent']);
