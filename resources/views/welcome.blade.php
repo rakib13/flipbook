@@ -220,6 +220,20 @@
 </script>
 
 <script>
+    // clear old flipbook
+    $('#flipbook').empty();
+    $('#prev, #next, #zoom-in, #zoom-out, #fullscreen, #sound-toggle, #page-slider').off();
+
+
+    // let pdfUrl = filePath;
+    const bookWidth = 1000,
+        bookHeight = 650,
+        pageWidth = bookWidth / 2,
+        pageHeight = bookHeight;
+    let pdfDoc = null,
+        userZoom = 1.0,
+        soundEnabled = true;
+    const flipSound = new Audio('https://www.soundjay.com/buttons/sounds/page-flip-01a.mp3');
     // var filePath;        
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
@@ -235,20 +249,6 @@
 
     function loadFlipbook(filePath) {
 
-        // clear old flipbook
-        $('#flipbook').turn('destroy').empty();
-        $('#prev, #next, #zoom-in, #zoom-out, #fullscreen, #sound-toggle, #page-slider').off();
-
-
-        // let pdfUrl = filePath;
-        const bookWidth = 1000,
-            bookHeight = 650,
-            pageWidth = bookWidth / 2,
-            pageHeight = bookHeight;
-        let pdfDoc = null,
-            userZoom = 1.0,
-            soundEnabled = true;
-        const flipSound = new Audio('https://www.soundjay.com/buttons/sounds/page-flip-01a.mp3');
 
         let $flipbook = $('#flipbook');
 
@@ -262,7 +262,6 @@
                 $flipbook.append('<div class="page"><canvas id="canvas-' + i + '"></canvas></div>');
             }
 
-
             $flipbook.turn({
                 width: bookWidth,
                 height: bookHeight,
@@ -273,6 +272,7 @@
                 gradients: true,
                 when: {
                     turning: function(event, page) {
+            console.log('PDF loaded with ' + pdf.numPages + ' pages');
                         renderPage(page);
                         renderPage(page + 1);
                         $('#page-slider').val(page);
