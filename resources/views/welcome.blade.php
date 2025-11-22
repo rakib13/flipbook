@@ -6,10 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>FLip Book Modal</title>
-    <!-- In your layouts/app.blade.php or similar -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 
     <style>
+        /* (CSS remains the same) */
         body {
             background: #f4f4f4;
             font-family: Arial, sans-serif;
@@ -120,21 +120,18 @@
 </head>
 
 <body>
-    <!-- Button to trigger the modal -->
+    <h1>Flipbook Modal Example</h1>
+    <p>Click a button to load a different PDF (Ensure these paths exist on your server).</p>
+
     <button type="button" class="btn btn-primary loadImage" data-bs-toggle="modal" data-bs-target="#myModal"
         onclick="showModal(event, 'pdf/git-n-github-at-glance.pdf')">
-        Open Modal
+        Open PDF 1 (Example Small)
     </button>
 
     <button type="button" class="btn btn-primary loadImage" data-bs-toggle="modal" data-bs-target="#myModal"
         onclick="showModal(event, 'pdf/BNP_Proposal_on_EC.pdf')">
-        Open Modal
+        Open PDF 2 (Example Large)
     </button>
-
-    <!-- The Modal -->
-    {{-- @include('modal-content', ['filePath' => 'pdf/git-n-github-at-glance.pdf']) --}}
-    {{-- @include('modal-content', ['filePath' => $dataPath ?? '']) --}}
-
 
     <div class="modal fade" id="myModal" tabindex="-1" aria-labelledby="myModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
@@ -151,17 +148,14 @@
                         <button id="sound-toggle">🔊 Sound On</button>
                     </div>
 
-                    <!-- Flipbook -->
                     <div id="flipbook-wrapper">
                         <div id="flipbook">Loading...</div>
                         <div class="nav-arrow left" id="prev">◀</div>
                         <div class="nav-arrow right" id="next">▶</div>
                     </div>
 
-                    <!-- Slider -->
                     <input id="page-slider" type="range" min="1" max="1" value="1">
 
-                    <!-- Share + Download -->
                     <div class="bottom-bar">
                         <button id="share-btn">🔗 Share</button>
                         <a href="" download class="download-btn">⬇ Download PDF</a>
@@ -169,63 +163,20 @@
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary">Save changes</button>
                 </div>
             </div>
         </div>
     </div>
 
-
-
 </body>
-
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/turn.js/3/turn.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.js"></script>
 
-<script>
-    // Example using jQuery and AJAX
-
-    // $('#myModal').on('show.bs.modal', function(event) {
-    //     var button = $(event.relatedTarget); // Button that triggered the modal
-    //     // var dataId = button.data('id'); // Extract info from data-* attributes
-
-    //     $.ajax({
-    //         url: '/Modal',
-    //         method: 'GET',
-    //         success: function(response) {
-    //             $('#myModal .modal-body').html(response); // Inject content
-    //         }
-    //     });
-    // });
-
-
-    // function showModal(event, filePath) {
-    //     $.ajax({
-    //         url: '/Modal',
-    //         method: 'GET',
-    //         data: {
-    //             filePath: filePath
-    //         }, // Pass the file path as a parameter
-    //         success: function(response) {
-    //             // $('#myModal .modal-body').html(response); // Inject content
-    //             $('#myModalLabel').text(filePath);
-    //             $('#myModal .download-btn').attr('href', filePath);
-    //             $('#myModal .modal-body').html(response); // Inject content
-
-    //         }
-    //     });
-</script>
 
 <script>
-    // clear old flipbook
-    $('#flipbook').empty();
-    $('#prev, #next, #zoom-in, #zoom-out, #fullscreen, #sound-toggle, #page-slider').off();
-
-
-    // let pdfUrl = filePath;
     const bookWidth = 1000,
         bookHeight = 650,
         pageWidth = bookWidth / 2,
@@ -233,35 +184,177 @@
     let pdfDoc = null,
         userZoom = 1.0,
         soundEnabled = true;
-    const flipSound = new Audio('https://www.soundjay.com/buttons/sounds/page-flip-01a.mp3');
-    // var filePath;        
+    const flipSound = new Audio('https://www.soundjay.com/buttons/sounds/page-flip-01a.mp3'); 
+
+    // Set the PDF.js worker path globally once
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.10.377/pdf.worker.min.js';
 
-    function showModal(event, filePath) {
-        $('#myModalLabel').text(filePath);
-        $('#myModal .download-btn').attr('href', filePath);
+    // --- Core PDF Rendering Functions ---
 
-        // Wait until modal is shown before initializing flipbook
-        $('#myModal').off('shown.bs.modal').on('shown.bs.modal', function() {
-            loadFlipbook(filePath);
+    function renderPage(num) {
+        if (!pdfDoc || num < 1 || num > pdfDoc.numPages) return;
+        let canvas = document.getElementById('canvas-' + num);
+        if (!canvas) return;
+
+        // Clear any previous error message/hidden state
+        $(canvas).removeClass('d-none').css('display', 'block'); 
+        $(canvas).siblings('.error-message').remove();
+
+        pdfDoc.getPage(num).then(function(page) {
+            const unscaled = page.getViewport({
+                scale: 1
+            });
+            const fitScale = (pageWidth / unscaled.width) * userZoom;
+            const viewport = page.getViewport({
+                scale: fitScale
+            });
+            
+            // Set canvas dimensions
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            canvas.style.width = '100%';
+            canvas.style.height = '100%'; 
+            
+            page.render({
+                canvasContext: canvas.getContext('2d'),
+                viewport
+            });
+        }).catch(pageErr => {
+             console.error(`Error rendering page ${num}:`, pageErr);
+             let $pageDiv = $(canvas).closest('.page');
+             if ($pageDiv.length && !$pageDiv.find('.error-message').length) {
+                $pageDiv.append('<div class="error-message" style="color:red; margin-top: 10px;">Error rendering page: ' + pageErr.message + '</div>');
+                $(canvas).addClass('d-none'); 
+             }
         });
     }
 
-    function loadFlipbook(filePath) {
-
-
+    function reloadPages(current) {
         let $flipbook = $('#flipbook');
+        // This check prevents reloadPages from running if the PDF load failed (pdfDoc is null)
+        if (!pdfDoc) return; 
+        
+        // This check is the source of the persistent error if turn.js state isn't cleaned up.
+        // We'll rely on the aggressive cleanup in showModal to ensure this works.
+        current = current || $flipbook.turn('page') || 1; 
+        
+        // Reload the current view and a few surrounding pages
+        for (let p = Math.max(1, current - 2); p <= Math.min(pdfDoc.numPages, current + 3); p++) {
+            renderPage(p);
+        }
+    }
+    
+    // --- Control and Event Binding Functions (Defined Globally) ---
 
+    function attachControls(book) {
+        // 1. Clear previous event listeners using namespaces for safety
+        $('#prev, #next, #zoom-in, #zoom-out, #fullscreen, #sound-toggle, #page-slider, #share-btn').off('.flipbook');
+        $(document).off('keydown.flipbook'); 
+
+        // 2. Navigation (only bind if the book is initialized)
+        if (book) {
+            $('#prev').on('click.flipbook', () => book.turn('previous'));
+            $('#next').on('click.flipbook', () => book.turn('next'));
+            
+            // Zoom Controls
+            $('#zoom-in').on('click.flipbook', () => { 
+                userZoom = Math.min(userZoom + 0.15, 3.0); 
+                reloadPages(); 
+            });
+            $('#zoom-out').on('click.flipbook', () => { 
+                userZoom = Math.max(userZoom - 0.15, 0.4); 
+                reloadPages(); 
+            });
+
+            // Slider
+            $('#page-slider').on('input change.flipbook', function() {
+                const targetPage = parseInt(this.value) || 1;
+                if (pdfDoc && targetPage >= 1 && targetPage <= pdfDoc.numPages) {
+                    book.turn('page', targetPage);
+                }
+            });
+
+            // Keyboard Navigation
+            $(document).on('keydown.flipbook', e => {
+                if ($('#myModal').hasClass('show')) {
+                    if (e.key === 'ArrowLeft') book.turn('previous');
+                    if (e.key === 'ArrowRight') book.turn('next');
+                }
+            });
+        }
+        
+        // 3. Other Controls (Always bound)
+        $('#fullscreen').on('click.flipbook', () => {
+            const el = document.documentElement;
+            !document.fullscreenElement ? el.requestFullscreen() : document.exitFullscreen();
+        });
+        
+        $('#sound-toggle').on('click.flipbook', () => {
+            soundEnabled = !soundEnabled;
+            $('#sound-toggle').text(soundEnabled ? '🔊 Sound On' : '🔇 Sound Off');
+        });
+        
+        $('#share-btn').on('click.flipbook', () => {
+            const shareUrl = window.location.href;
+            if (navigator.share) {
+                navigator.share({
+                    title: "Flipbook",
+                    text: "Check out this PDF flipbook!",
+                    url: shareUrl
+                }).catch(err => console.log("Share failed:", err));
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(() => {
+                    alert("Link copied to clipboard!");
+                });
+            }
+        });
+    }
+
+    // --- Modal and Load Workflow ---
+
+    function showModal(event, filePath) {
+        let $flipbook = $('#flipbook');
+        
+        // 1. CRITICAL CLEANUP STEP A: Destroy the old turn.js instance if it exists.
+        if ($flipbook.data('turnJs')) {
+            $flipbook.turn('destroy');
+        }
+        
+        // 2. CRITICAL CLEANUP STEP B: Remove ALL jQuery data associated with the element.
+        // This is the most aggressive way to clear leftover state that turn.js might be clinging to.
+        $flipbook.removeData();
+
+        // 3. Clear previous controls and reset state
+        attachControls(null); 
+        userZoom = 1.0; 
+        pdfDoc = null; 
+        $flipbook.empty().html('Loading...'); 
+        
+        $('#myModalLabel').text(filePath);
+        $('#myModal .download-btn').attr('href', filePath);
+
+        // 4. Load PDF immediately
+        loadFlipbook(filePath);
+    }
+
+    function loadFlipbook(filePath) {
+        let $flipbook = $('#flipbook');
+        
         pdfjsLib.getDocument(filePath).promise.then(function(pdf) {
             pdfDoc = pdf;
             $flipbook.empty();
+            console.log('PDF loaded with ' + pdf.numPages + ' pages');
 
             $('#page-slider').attr('max', pdf.numPages);
 
+            // 1. Create page elements
+            let pagesHtml = '';
             for (let i = 1; i <= pdf.numPages; i++) {
-                $flipbook.append('<div class="page"><canvas id="canvas-' + i + '"></canvas></div>');
+                pagesHtml += '<div class="page"><canvas id="canvas-' + i + '"></canvas></div>';
             }
+            $flipbook.append(pagesHtml);
 
+            // 2. Initialize turn.js
             $flipbook.turn({
                 width: bookWidth,
                 height: bookHeight,
@@ -272,98 +365,34 @@
                 gradients: true,
                 when: {
                     turning: function(event, page) {
-            console.log('PDF loaded with ' + pdf.numPages + ' pages');
+                        $('#page-slider').val(page);
                         renderPage(page);
                         renderPage(page + 1);
-                        $('#page-slider').val(page);
+                        
                         if (soundEnabled) {
                             try {
                                 flipSound.currentTime = 0;
                                 flipSound.play();
                             } catch (e) {}
                         }
+                    },
+                    turned: function(event, page, view) {
+                        reloadPages(page);
                     }
                 }
             });
 
+            // 3. Initial page render
             renderPage(1);
             if (pdf.numPages > 1) renderPage(2);
+            
+            // 4. Attach controls, passing the initialized turn.js instance
+            attachControls($flipbook); 
+
         }).catch(err => {
-            $('#flipbook').html('<p class="text-danger">Failed to load PDF: ' + err.message + '</p>');
-        });
-
-        function renderPage(num) {
-            if (!pdfDoc || num < 1 || num > pdfDoc.numPages) return;
-            let canvas = document.getElementById('canvas-' + num);
-            if (!canvas) return;
-            pdfDoc.getPage(num).then(function(page) {
-                const unscaled = page.getViewport({
-                    scale: 1
-                });
-                const fitScale = (pageWidth / unscaled.width) * userZoom;
-                const viewport = page.getViewport({
-                    scale: fitScale
-                });
-                canvas.width = viewport.width;
-                canvas.height = viewport.height;
-                canvas.style.width = viewport.width + 'px';
-                canvas.style.height = viewport.height + 'px';
-                page.render({
-                    canvasContext: canvas.getContext('2d'),
-                    viewport
-                });
-            });
-        }
-
-        function reloadPages() {
-            let current = $flipbook.turn('page') || 1;
-            for (let p = Math.max(1, current - 2); p <= Math.min(pdfDoc.numPages, current + 3); p++) renderPage(
-                p);
-        }
-
-        $('#prev').click(() => $flipbook.turn('previous'));
-        $('#next').click(() => $flipbook.turn('next'));
-        $('#zoom-in').click(() => {
-            userZoom += 0.15;
-            reloadPages();
-        });
-        $('#zoom-out').click(() => {
-            if (userZoom > 0.4) {
-                userZoom -= 0.15;
-                reloadPages();
-            }
-        });
-        $('#fullscreen').click(() => {
-            const el = document.documentElement;
-            !document.fullscreenElement ? el.requestFullscreen() : document.exitFullscreen();
-        });
-        $('#sound-toggle').click(() => {
-            soundEnabled = !soundEnabled;
-            $('#sound-toggle').text(soundEnabled ? '🔊 Sound On' : '🔇 Sound Off');
-        });
-        $('#page-slider').on('input change', function() {
-            $flipbook.turn('page', parseInt(this.value) || 1);
-        });
-        $(document).keydown(e => {
-            if (e.key === 'ArrowLeft') $flipbook.turn('previous');
-            if (e.key === 'ArrowRight') $flipbook.turn('next');
-        });
-
-        // SHARE button
-        document.getElementById("share-btn").addEventListener("click", () => {
-            const shareUrl = window.location.href; // current page link
-            if (navigator.share) {
-                navigator.share({
-                    title: "Flipbook",
-                    text: "Check out this PDF flipbook!",
-                    url: shareUrl
-                }).catch(err => console.log("Share failed:", err));
-            } else {
-                // fallback: copy to clipboard
-                navigator.clipboard.writeText(shareUrl).then(() => {
-                    alert("Link copied to clipboard!");
-                });
-            }
+            console.error('PDF load failed:', err);
+            // Display error if PDF fails to load
+            $('#flipbook').html('<p class="text-danger">Failed to load PDF: ' + err.message + '. Please ensure the PDF file path is correct or the file exists at that path.</p>');
         });
     }
 </script>
